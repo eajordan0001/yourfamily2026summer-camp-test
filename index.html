@@ -1,143 +1,252 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <base target="_top">
-  <script src="https://unpkg.com/html5-qrcode"></script>
-  <style>
-    :root { --primary: #2196f3; --success: #4caf50; --bg: #f5f5f5; }
-    body { font-family: -apple-system, "Microsoft JhengHei", sans-serif; background: var(--bg); padding: 15px; margin: 0; }
-    .card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 15px; }
-    #reader { width: 100%; border-radius: 8px; overflow: hidden; background: #000; }
-    .user-info { display: none; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
-    .info-box { background: #e3f2fd; padding: 12px; border-radius: 8px; text-align: center; font-size: 1.1rem; font-weight: bold; }
-    .total-display { font-size: 2.2rem; color: var(--primary); font-weight: bold; text-align: center; margin: 15px 0; }
-    .btn-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-    button { border: none; border-radius: 8px; padding: 12px 5px; font-size: 1.1rem; cursor: pointer; transition: 0.2s; }
-    .btn-plus { background: #e8f5e9; color: #2e7d32; }
-    .btn-minus { background: #ffebee; color: #c62828; }
-    /* 這裡負責 12 個按鈕的排版 */
-    .item-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 20px; }
-    .item-btn { background: #eeeeee; color: #757575; font-size: 0.9rem; border: 2px solid transparent; padding: 15px 5px; }
-    .item-btn.active { background: var(--primary); color: white; border-color: #1565c0; }
-    #submit-btn { width: 100%; background: var(--success); color: white; padding: 18px; margin-top: 25px; font-size: 1.3rem; border-radius: 8px; font-weight: bold; }
-    #submit-btn:disabled { background: #ccc; cursor: not-allowed; }
-    .loading-overlay { display:none; text-align:center; padding: 10px; color: #666; font-style: italic; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>優兒行動銀行 POS</title>
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+
+<style>
+body {
+    font-family: sans-serif;
+    text-align: center;
+    margin: 0;
+    background: #f4f4f4;
+}
+
+.container {
+    padding: 15px;
+}
+
+#reader {
+    width: 100%;
+    min-height: 300px;
+    background: black;
+    border-radius: 10px;
+}
+
+/* 開始按鈕 */
+#cam-btn {
+    width: 100%;
+    padding: 18px;
+    font-size: 20px;
+    background: #e6007e;
+    color: white;
+    border: none;
+    margin-bottom: 10px;
+}
+
+input {
+    width: 80%;
+    font-size: 28px;
+    text-align: center;
+    padding: 10px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+}
+
+.btn {
+    padding: 10px;
+    font-weight: bold;
+}
+
+.main {
+    width: 100%;
+    padding: 15px;
+    background: #28a745;
+    color: white;
+    border: none;
+}
+</style>
 </head>
+
 <body>
 
-  <div class="card">
-    <div id="reader"></div>
-    <div id="loading" class="loading-overlay">資料讀取中，請稍候...</div>
-    <div id="user-display" class="user-info">
-      <div class="info-box">學員: <span id="u-name"></span></div>
-      <div class="info-box">餘額: $<span id="u-balance"></span></div>
-    </div>
-  </div>
+<div class="container">
 
-  <div id="action-section" style="display:none;">
-    <div class="card">
-      <div class="total-display">本次變動: $<span id="val-change">0</span></div>
-      <div class="btn-grid">
-        <button class="btn-plus" onclick="modAmt(1)">+1</button>
-        <button class="btn-plus" onclick="modAmt(5)">+5</button>
-        <button class="btn-plus" onclick="modAmt(10)">+10</button>
-        <button class="btn-plus" onclick="modAmt(50)">+50</button>
-        <button class="btn-minus" onclick="modAmt(-1)">-1</button>
-        <button class="btn-minus" onclick="modAmt(-5)">-5</button>
-        <button class="btn-minus" onclick="modAmt(-10)">-10</button>
-        <button class="btn-minus" onclick="modAmt(-50)">-50</button>
-      </div>
-      
-      <div class="item-grid">
-        <button class="item-btn" onclick="setItm(this, '餅乾')">餅乾</button>
-        <button class="item-btn" onclick="setItm(this, '飲料')">飲料</button>
-        <button class="item-btn" onclick="setItm(this, '預留1')">預留1</button>
-        <button class="item-btn" onclick="setItm(this, '預留2')">預留2</button>
-        <button class="item-btn" onclick="setItm(this, '預留3')">預留3</button>
-        <button class="item-btn" onclick="setItm(this, '預留4')">預留4</button>
-        <button class="item-btn" onclick="setItm(this, '預留5')">預留5</button>
-        <button class="item-btn" onclick="setItm(this, '預留6')">預留6</button>
-        <button class="item-btn" onclick="setItm(this, '預留7')">預留7</button>
-        <button class="item-btn" onclick="setItm(this, '預留8')">預留8</button>
-        <button class="item-btn" onclick="setItm(this, '預留9')">預留9</button>
-        <button class="item-btn" onclick="setItm(this, '預留10')">預留10</button>
-      </div>
-      
-      <button id="submit-btn" onclick="send()">確認送出交易</button>
+<h2>💰 優兒行動銀行 POS</h2>
+
+<button id="cam-btn" onclick="startScanner()">
+📷 開始連續掃描
+</button>
+
+<div id="reader"></div>
+
+<div id="result" style="display:none;">
+
+    <div id="name" style="font-size:22px;font-weight:bold;"></div>
+    <div id="balance" style="font-size:30px;"></div>
+
+    <input type="number" id="amount" value="0">
+
+    <div class="grid">
+        <button class="btn" onclick="adj(1)">+1</button>
+        <button class="btn" onclick="adj(5)">+5</button>
+        <button class="btn" onclick="adj(10)">+10</button>
+        <button class="btn" onclick="adj(50)">+50</button>
+
+        <button class="btn" onclick="adj(-1)">-1</button>
+        <button class="btn" onclick="adj(-5)">-5</button>
+        <button class="btn" onclick="adj(-10)">-10</button>
+        <button class="btn" onclick="adj(-50)">-50</button>
     </div>
-  </div>
+
+    <button class="main" onclick="doTrade()">手動交易</button>
+</div>
+
+</div>
 
 <script>
-  let curUser = null, curAmt = 0, curItm = "";
-  const submitBtn = document.getElementById('submit-btn');
 
-  const scanner = new Html5Qrcode("reader");
-  function startScan() {
-    scanner.start(
-      { facingMode: "environment" }, 
-      { fps: 10, qrbox: 250 }, 
-      onScanSuccess
-    ).catch(err => alert("相機啟動失敗"));
-  }
+const scriptURL = "https://script.google.com/macros/s/AKfycbzI8YIKfK2h5MVeUOWE1oJq4mHu4KguUOVS_gt0wZdHvSz1AaDaOaE8jCD0rmz9q9SV/exec";
+const TOKEN = "abc123";
 
-  function onScanSuccess(decodedText) {
-    scanner.pause(true);
-    document.getElementById('loading').style.display = 'block';
-    document.getElementById('user-display').style.display = 'none';
-    document.getElementById('action-section').style.display = 'none';
+let scanner;
+let globalId = "";
+let tid = "";
 
-    google.script.run
-      .withSuccessHandler(function(u) {
-        document.getElementById('loading').style.display = 'none';
-        if (!u) {
-          alert("錯誤：找不到 ID [" + decodedText + "]");
-          scanner.resume();
-          return;
+// 🔢 加減
+function adj(v) {
+    amount.value = (parseInt(amount.value) || 0) + v;
+}
+
+// 🔥 初始化 scanner（iPhone穩定關鍵）
+async function startScanner() {
+
+    document.getElementById("cam-btn").innerText = "開啟中...";
+
+    try {
+
+        if (scanner) {
+            await scanner.stop().catch(()=>{});
+            await scanner.clear().catch(()=>{});
         }
-        curUser = u;
-        document.getElementById('u-name').innerText = u.name;
-        document.getElementById('u-balance').innerText = u.balance;
-        document.getElementById('user-display').style.display = 'grid';
-        document.getElementById('action-section').style.display = 'block';
-      })
-      .withFailureHandler(function(e) {
-        document.getElementById('loading').style.display = 'none';
-        alert("通訊錯誤: " + e.message);
-        scanner.resume();
-      })
-      .getUserData(decodedText);
-  }
 
-  function modAmt(v) { 
-    curAmt += v; 
-    document.getElementById('val-change').innerText = curAmt; 
-  }
+        scanner = new Html5Qrcode("reader");
 
-  function setItm(el, n) {
-    document.querySelectorAll('.item-btn').forEach(b => b.classList.remove('active'));
-    el.classList.add('active'); 
-    curItm = n;
-  }
+        const config = {
+            fps: 12,
+            qrbox: 250,
+            rememberLastUsedCamera: true
+        };
 
-  function send() {
-    if(!curUser || !curItm || curAmt === 0) return alert("請選擇項目並調整金額");
-    submitBtn.disabled = true;
-    submitBtn.innerText = "寫入中...";
-    google.script.run
-      .withSuccessHandler(function(nb) {
-        alert("交易成功！新餘額：$" + nb);
-        location.reload();
-      })
-      .withFailureHandler(function(e) {
-        alert("失敗：" + e.message);
-        submitBtn.disabled = false;
-        submitBtn.innerText = "確認送出交易";
-      })
-      .processTransaction(curUser.row, curAmt, curItm);
-  }
+        await scanner.start(
+            { facingMode: "environment" },
+            config,
+            (text) => {
 
-  window.onload = startScan;
+                // 🚀 立即鎖定，避免重複掃描
+                if (globalId === text) return;
+
+                globalId = text.trim();
+                tid = "T" + Date.now();
+
+                handleScan(globalId);
+
+            }
+        );
+
+        document.getElementById("cam-btn").style.display = "none";
+
+    } catch (err) {
+        console.error(err);
+        alert("鏡頭開啟失敗，請用 Safari/Chrome + HTTPS");
+        document.getElementById("cam-btn").innerText = "📷 重新開啟";
+    }
+}
+
+// 💳 核心：掃描後處理（連刷模式）
+async function handleScan(id) {
+
+    try {
+
+        const url = `${scriptURL}?id=${id}&amount=0&token=${TOKEN}`;
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (data.status === "success") {
+
+            name.innerText = data.name;
+            balance.innerText = data.balance;
+
+            result.style.display = "block";
+
+            // 🔁 悠遊卡模式：自動扣款（如果 amount != 0）
+            let amt = parseInt(amount.value) || 0;
+
+            if (amt !== 0) {
+                await autoTrade(amt);
+            }
+
+        }
+
+        // 🔁 不卡關鍵：掃完繼續掃
+        restartScan();
+
+    } catch (e) {
+        console.log(e);
+        restartScan();
+    }
+}
+
+// 🔁 自動交易（悠遊卡模式）
+async function autoTrade(amt) {
+
+    let bal = parseInt(balance.innerText) || 0;
+
+    if (amt < 0 && Math.abs(amt) > bal) {
+        alert("餘額不足");
+        return;
+    }
+
+    const url = `${scriptURL}?id=${globalId}&amount=${amt}&tid=${tid}&token=${TOKEN}`;
+
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (data.status === "success") {
+
+        if (navigator.vibrate) navigator.vibrate(100);
+
+        const sound = new Audio("https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg");
+        sound.play();
+
+        balance.innerText = data.newBalance;
+
+    }
+}
+
+// 🔁 重新進入掃描（不卡 iPhone 關鍵）
+async function restartScan() {
+
+    try {
+        await scanner.stop().catch(()=>{});
+        await scanner.clear().catch(()=>{});
+
+        setTimeout(() => {
+            startScanner();
+        }, 300);
+
+    } catch (e) {
+        console.log(e);
+    }
+}
+
+// 💰 手動交易
+async function doTrade() {
+    let amt = parseInt(amount.value) || 0;
+    if (amt === 0) return alert("請輸入金額");
+
+    await autoTrade(amt);
+    restartScan();
+}
+
 </script>
+
 </body>
 </html>
