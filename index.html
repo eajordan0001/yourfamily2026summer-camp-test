@@ -4,41 +4,40 @@
   <base target="_top">
   <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
-    :root { --primary: #2196f3; --bg: #f8f9fa; --card: #ffffff; --text: #333; }
-    body { font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; background: var(--bg); padding: 15px; color: var(--text); }
-    .container { max-width: 600px; margin: 0 auto; }
-    .card { background: var(--card); border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); padding: 20px; margin-bottom: 15px; }
-    h2 { margin: 0 0 15px 0; font-size: 1.2rem; border-left: 4px solid var(--primary); padding-left: 10px; }
+    :root { --primary: #2196f3; --success: #4caf50; --bg: #f5f5f5; }
+    body { font-family: -apple-system, "Microsoft JhengHei", sans-serif; background: var(--bg); padding: 15px; margin: 0; }
+    .card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 15px; }
     #reader { width: 100%; border-radius: 8px; overflow: hidden; background: #000; }
-    .user-info { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; font-size: 1.1rem; }
-    .balance-box { background: #e3f2fd; padding: 10px; border-radius: 8px; text-align: center; }
-    .total-display { font-size: 2rem; color: var(--primary); font-weight: bold; text-align: center; margin: 15px 0; }
+    .user-info { display: none; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+    .info-box { background: #e3f2fd; padding: 12px; border-radius: 8px; text-align: center; font-size: 1.1rem; font-weight: bold; }
+    .total-display { font-size: 2.2rem; color: var(--primary); font-weight: bold; text-align: center; margin: 15px 0; }
     .btn-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-    button { border: none; border-radius: 6px; padding: 12px 5px; font-size: 1rem; cursor: pointer; transition: 0.2s; font-weight: 500; }
+    button { border: none; border-radius: 8px; padding: 12px 5px; font-size: 1.1rem; cursor: pointer; transition: 0.2s; }
     .btn-plus { background: #e8f5e9; color: #2e7d32; }
     .btn-minus { background: #ffebee; color: #c62828; }
+    /* 這裡負責 12 個按鈕的排版 */
     .item-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 20px; }
-    .item-btn { background: #eeeeee; color: #757575; border: 1px solid #ddd; }
-    .item-btn.active { background: var(--primary); color: white; border-color: var(--primary); transform: scale(1.05); }
-    #submit-btn { width: 100%; background: #4caf50; color: white; padding: 16px; margin-top: 25px; font-size: 1.2rem; border-radius: 8px; }
-    #submit-btn:disabled { background: #ccc; }
+    .item-btn { background: #eeeeee; color: #757575; font-size: 0.9rem; border: 2px solid transparent; padding: 15px 5px; }
+    .item-btn.active { background: var(--primary); color: white; border-color: #1565c0; }
+    #submit-btn { width: 100%; background: var(--success); color: white; padding: 18px; margin-top: 25px; font-size: 1.3rem; border-radius: 8px; font-weight: bold; }
+    #submit-btn:disabled { background: #ccc; cursor: not-allowed; }
+    .loading-overlay { display:none; text-align:center; padding: 10px; color: #666; font-style: italic; }
   </style>
 </head>
 <body>
-<div class="container">
-  <div class="card" id="scanner-section">
-    <h2>步驟 1: 掃描 QR Code</h2>
+
+  <div class="card">
     <div id="reader"></div>
-    <div id="user-display" style="display:none;" class="user-info">
-      <div class="balance-box">姓名: <span id="u-name"></span></div>
-      <div class="balance-box">餘額: $<span id="u-balance"></span></div>
+    <div id="loading" class="loading-overlay">資料讀取中，請稍候...</div>
+    <div id="user-display" class="user-info">
+      <div class="info-box">學員: <span id="u-name"></span></div>
+      <div class="info-box">餘額: $<span id="u-balance"></span></div>
     </div>
   </div>
 
   <div id="action-section" style="display:none;">
     <div class="card">
-      <h2>步驟 2: 調整金額與項目</h2>
-      <div class="total-display">本次累計: $<span id="val-change">0</span></div>
+      <div class="total-display">本次變動: $<span id="val-change">0</span></div>
       <div class="btn-grid">
         <button class="btn-plus" onclick="modAmt(1)">+1</button>
         <button class="btn-plus" onclick="modAmt(5)">+5</button>
@@ -50,55 +49,95 @@
         <button class="btn-minus" onclick="modAmt(-50)">-50</button>
       </div>
       
-      <div class="item-grid" id="items">
+      <div class="item-grid">
         <button class="item-btn" onclick="setItm(this, '餅乾')">餅乾</button>
         <button class="item-btn" onclick="setItm(this, '飲料')">飲料</button>
-        </div>
+        <button class="item-btn" onclick="setItm(this, '預留1')">預留1</button>
+        <button class="item-btn" onclick="setItm(this, '預留2')">預留2</button>
+        <button class="item-btn" onclick="setItm(this, '預留3')">預留3</button>
+        <button class="item-btn" onclick="setItm(this, '預留4')">預留4</button>
+        <button class="item-btn" onclick="setItm(this, '預留5')">預留5</button>
+        <button class="item-btn" onclick="setItm(this, '預留6')">預留6</button>
+        <button class="item-btn" onclick="setItm(this, '預留7')">預留7</button>
+        <button class="item-btn" onclick="setItm(this, '預留8')">預留8</button>
+        <button class="item-btn" onclick="setItm(this, '預留9')">預留9</button>
+        <button class="item-btn" onclick="setItm(this, '預留10')">預留10</button>
+      </div>
+      
       <button id="submit-btn" onclick="send()">確認送出交易</button>
     </div>
   </div>
-</div>
 
 <script>
   let curUser = null, curAmt = 0, curItm = "";
-  const itemsDiv = document.getElementById('items');
-  
-  // 初始化預留按鈕 (預留1-10)
-  for(let i=1; i<=10; i++) {
-    let b = document.createElement('button');
-    b.className = 'item-btn';
-    b.innerText = `預留${i}`;
-    b.onclick = function() { setItm(this, `預留${i}`); };
-    itemsDiv.appendChild(b);
-  }
+  const submitBtn = document.getElementById('submit-btn');
 
   const scanner = new Html5Qrcode("reader");
-  scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (id) => {
-    scanner.pause(true);
-    google.script.run.withSuccessHandler(u => {
-      curUser = u;
-      document.getElementById('u-name').innerText = u.name;
-      document.getElementById('u-balance').innerText = u.balance;
-      document.getElementById('user-display').style.display = 'grid';
-      document.getElementById('action-section').style.display = 'block';
-    }).withFailureHandler(e => { alert(e); scanner.resume(); }).getUserData(id);
-  });
+  function startScan() {
+    scanner.start(
+      { facingMode: "environment" }, 
+      { fps: 10, qrbox: 250 }, 
+      onScanSuccess
+    ).catch(err => alert("相機啟動失敗"));
+  }
 
-  function modAmt(v) { curAmt += v; document.getElementById('val-change').innerText = curAmt; }
+  function onScanSuccess(decodedText) {
+    scanner.pause(true);
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('user-display').style.display = 'none';
+    document.getElementById('action-section').style.display = 'none';
+
+    google.script.run
+      .withSuccessHandler(function(u) {
+        document.getElementById('loading').style.display = 'none';
+        if (!u) {
+          alert("錯誤：找不到 ID [" + decodedText + "]");
+          scanner.resume();
+          return;
+        }
+        curUser = u;
+        document.getElementById('u-name').innerText = u.name;
+        document.getElementById('u-balance').innerText = u.balance;
+        document.getElementById('user-display').style.display = 'grid';
+        document.getElementById('action-section').style.display = 'block';
+      })
+      .withFailureHandler(function(e) {
+        document.getElementById('loading').style.display = 'none';
+        alert("通訊錯誤: " + e.message);
+        scanner.resume();
+      })
+      .getUserData(decodedText);
+  }
+
+  function modAmt(v) { 
+    curAmt += v; 
+    document.getElementById('val-change').innerText = curAmt; 
+  }
+
   function setItm(el, n) {
     document.querySelectorAll('.item-btn').forEach(b => b.classList.remove('active'));
-    el.classList.add('active'); curItm = n;
+    el.classList.add('active'); 
+    curItm = n;
   }
 
   function send() {
-    if(!curItm || curAmt === 0) return alert("請選擇項目並調整金額！");
-    const btn = document.getElementById('submit-btn');
-    btn.disabled = true; btn.innerText = "寫入資料庫中...";
-    google.script.run.withSuccessHandler(nb => {
-      alert(`交易成功！${curUser.name} 的新餘額為: ${nb}`);
-      location.reload();
-    }).processTransaction(curUser.row, curAmt, curItm);
+    if(!curUser || !curItm || curAmt === 0) return alert("請選擇項目並調整金額");
+    submitBtn.disabled = true;
+    submitBtn.innerText = "寫入中...";
+    google.script.run
+      .withSuccessHandler(function(nb) {
+        alert("交易成功！新餘額：$" + nb);
+        location.reload();
+      })
+      .withFailureHandler(function(e) {
+        alert("失敗：" + e.message);
+        submitBtn.disabled = false;
+        submitBtn.innerText = "確認送出交易";
+      })
+      .processTransaction(curUser.row, curAmt, curItm);
   }
+
+  window.onload = startScan;
 </script>
 </body>
 </html>
