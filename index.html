@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>優兒行動銀行 POS</title>
+<title>優兒行動銀行系統</title>
 
 <script src="https://unpkg.com/html5-qrcode"></script>
 
@@ -12,241 +12,204 @@ body {
     font-family: sans-serif;
     text-align: center;
     margin: 0;
-    background: #f4f4f4;
+    padding: 20px;
+    background-color: #f4f4f4;
 }
-
 .container {
-    padding: 15px;
+    background: white;
+    padding: 20px;
+    border-radius: 15px;
+    max-width: 400px;
+    margin: auto;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
-
 #reader {
     width: 100%;
-    min-height: 300px;
-    background: black;
-    border-radius: 10px;
+    margin-bottom: 20px;
 }
-
-/* 開始按鈕 */
-#cam-btn {
-    width: 100%;
-    padding: 18px;
-    font-size: 20px;
-    background: #e6007e;
-    color: white;
-    border: none;
-    margin-bottom: 10px;
+.info {
+    margin: 15px 0;
 }
-
-input {
-    width: 80%;
-    font-size: 28px;
-    text-align: center;
-    padding: 10px;
+.name {
+    font-size: 24px;
+    font-weight: bold;
+    color: #e6007e;
 }
-
-.grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 5px;
-}
-
-.btn {
-    padding: 10px;
+.balance {
+    font-size: 32px;
     font-weight: bold;
 }
-
-.main {
+input {
+    width: 80%;
+    padding: 10px;
+    font-size: 28px;
+    text-align: center;
+}
+button {
     width: 100%;
     padding: 15px;
-    background: #28a745;
-    color: white;
-    border: none;
+    font-size: 18px;
+    margin-top: 10px;
 }
 </style>
 </head>
 
 <body>
-
 <div class="container">
-
-<h2>💰 優兒行動銀行 POS</h2>
-
-<button id="cam-btn" onclick="startScanner()">
-📷 開始連續掃描
-</button>
+<h2>💰 優兒行動銀行</h2>
 
 <div id="reader"></div>
 
 <div id="result" style="display:none;">
-
-    <div id="name" style="font-size:22px;font-weight:bold;"></div>
-    <div id="balance" style="font-size:30px;"></div>
+    <div class="info">
+        <div class="name" id="name">---</div>
+        <div class="balance" id="balance">---</div>
+    </div>
 
     <input type="number" id="amount" value="0">
 
-    <div class="grid">
-        <button class="btn" onclick="adj(1)">+1</button>
-        <button class="btn" onclick="adj(5)">+5</button>
-        <button class="btn" onclick="adj(10)">+10</button>
-        <button class="btn" onclick="adj(50)">+50</button>
-
-        <button class="btn" onclick="adj(-1)">-1</button>
-        <button class="btn" onclick="adj(-5)">-5</button>
-        <button class="btn" onclick="adj(-10)">-10</button>
-        <button class="btn" onclick="adj(-50)">-50</button>
-    </div>
-
-    <button class="main" onclick="doTrade()">手動交易</button>
+    <button id="ok-btn" onclick="doTrade()">確認加值/扣款</button>
+    <button onclick="resetUI()">重新掃描</button>
 </div>
-
 </div>
 
 <script>
-
+// 🔗 你的後端
 const scriptURL = "https://script.google.com/macros/s/AKfycbzI8YIKfK2h5MVeUOWE1oJq4mHu4KguUOVS_gt0wZdHvSz1AaDaOaE8jCD0rmz9q9SV/exec";
+
+// 🔐 token（要跟後端一致）
 const TOKEN = "abc123";
 
 let scanner;
 let globalId = "";
 let tid = "";
 
-// 🔢 加減
-function adj(v) {
-    amount.value = (parseInt(amount.value) || 0) + v;
+// 🔊 音效（只建立一次）
+const successSound = new Audio("https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg");
+
+// 🎉 成功回饋
+function playSuccessFeedback() {
+    if (navigator.vibrate) navigator.vibrate(100);
+
+    successSound.pause();
+    successSound.currentTime = 0;
+    successSound.play();
 }
 
-// 🔥 初始化 scanner（iPhone穩定關鍵）
-async function startScanner() {
+// ⏱ timeout 防卡死
+function fetchWithTimeout(url, timeout = 5000) {
+    return Promise.race([
+        fetch(url),
+        new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("timeout")), timeout)
+        )
+    ]);
+}
 
-    document.getElementById("cam-btn").innerText = "開啟中...";
+// 🚀 啟動掃描
+function startScan() {
+    document.getElementById("result").style.display = "none";
 
+    if (!scanner) scanner = new Html5Qrcode("reader");
+
+    scanner.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 250 },
+        (text) => {
+            globalId = text.trim();
+            tid = "T" + Date.now();
+
+            scanner.stop();
+            fetchData();
+        }
+    );
+}
+
+// 📥 讀取資料
+async function fetchData() {
     try {
+        const url = `${scriptURL}?id=${globalId}&amount=0&token=${TOKEN}`;
+        const res = await fetchWithTimeout(url);
+        const data = await res.json();
 
-        if (scanner) {
-            await scanner.stop().catch(()=>{});
-            await scanner.clear().catch(()=>{});
+        if (data.status === "success") {
+            document.getElementById("name").innerText = data.name;
+            document.getElementById("balance").innerText = data.balance || data.newBalance;
+
+            document.getElementById("result").style.display = "block";
+        } else {
+            alert(data.message);
         }
 
-        scanner = new Html5Qrcode("reader");
-
-        const config = {
-            fps: 12,
-            qrbox: 250,
-            rememberLastUsedCamera: true
-        };
-
-        await scanner.start(
-            { facingMode: "environment" },
-            config,
-            (text) => {
-
-                // 🚀 立即鎖定，避免重複掃描
-                if (globalId === text) return;
-
-                globalId = text.trim();
-                tid = "T" + Date.now();
-
-                handleScan(globalId);
-
-            }
-        );
-
-        document.getElementById("cam-btn").style.display = "none";
-
-    } catch (err) {
-        console.error(err);
-        alert("鏡頭開啟失敗，請用 Safari/Chrome + HTTPS");
-        document.getElementById("cam-btn").innerText = "📷 重新開啟";
+    } catch (e) {
+        alert("讀取失敗（可能網路不穩）");
     }
 }
 
-// 💳 核心：掃描後處理（連刷模式）
-async function handleScan(id) {
+// 💰 交易
+async function doTrade() {
+    const btn = document.getElementById("ok-btn");
+    if (btn.disabled) return;
+
+    let amt = parseInt(document.getElementById("amount").value) || 0;
+    if (amt === 0) return alert("請輸入金額");
+
+    let bal = parseInt(document.getElementById("balance").innerText) || 0;
+
+    // 防扣到負數
+    if (amt < 0 && Math.abs(amt) > bal) {
+        return alert("餘額不足");
+    }
+
+    btn.disabled = true;
+    btn.innerText = "處理中...";
 
     try {
-
-        const url = `${scriptURL}?id=${id}&amount=0&token=${TOKEN}`;
-        const res = await fetch(url);
+        const url = `${scriptURL}?id=${globalId}&amount=${amt}&tid=${tid}&token=${TOKEN}`;
+        const res = await fetchWithTimeout(url);
         const data = await res.json();
 
         if (data.status === "success") {
 
-            name.innerText = data.name;
-            balance.innerText = data.balance;
+            // 🎉 成功效果
+            playSuccessFeedback();
 
-            result.style.display = "block";
+            alert(`✅ 完成\n${data.name}\n餘額：${data.newBalance}`);
 
-            // 🔁 悠遊卡模式：自動扣款（如果 amount != 0）
-            let amt = parseInt(amount.value) || 0;
+            resetUI();
 
-            if (amt !== 0) {
-                await autoTrade(amt);
-            }
-
+        } else {
+            alert(data.message);
+            resetBtn();
         }
 
-        // 🔁 不卡關鍵：掃完繼續掃
-        restartScan();
-
     } catch (e) {
-        console.log(e);
-        restartScan();
+        alert("網路錯誤");
+        resetBtn();
     }
 }
 
-// 🔁 自動交易（悠遊卡模式）
-async function autoTrade(amt) {
-
-    let bal = parseInt(balance.innerText) || 0;
-
-    if (amt < 0 && Math.abs(amt) > bal) {
-        alert("餘額不足");
-        return;
-    }
-
-    const url = `${scriptURL}?id=${globalId}&amount=${amt}&tid=${tid}&token=${TOKEN}`;
-
-    const res = await fetch(url);
-    const data = await res.json();
-
-    if (data.status === "success") {
-
-        if (navigator.vibrate) navigator.vibrate(100);
-
-        const sound = new Audio("https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg");
-        sound.play();
-
-        balance.innerText = data.newBalance;
-
-    }
+// 🔄 重置按鈕
+function resetBtn() {
+    const btn = document.getElementById("ok-btn");
+    btn.disabled = false;
+    btn.innerText = "確認加值/扣款";
 }
 
-// 🔁 重新進入掃描（不卡 iPhone 關鍵）
-async function restartScan() {
-
-    try {
-        await scanner.stop().catch(()=>{});
-        await scanner.clear().catch(()=>{});
-
-        setTimeout(() => {
-            startScanner();
-        }, 300);
-
-    } catch (e) {
-        console.log(e);
-    }
+// 🔁 重置畫面
+function resetUI() {
+    resetBtn();
+    startScan();
 }
 
-// 💰 手動交易
-async function doTrade() {
-    let amt = parseInt(amount.value) || 0;
-    if (amt === 0) return alert("請輸入金額");
+// ✨ UX：點擊清空 0
+document.getElementById("amount").addEventListener("focus", function() {
+    if (this.value == "0") this.value = "";
+});
 
-    await autoTrade(amt);
-    restartScan();
-}
+// 🚀 啟動
+window.onload = startScan;
 
 </script>
-
 </body>
 </html>
